@@ -26,7 +26,13 @@ def api_recommend():
     input_data = request.json
     try:
         result = recommend_battery(input_data)
-        def format_result_table(result_dict):
+        discount = None
+        if "折扣率(%)" in input_data:
+            try:
+                discount = float(input_data["折扣率(%)"])
+            except Exception:
+                discount = None
+        def format_result_table(result_dict, discount=None):
             fields = [
                 ("适用叉车型号", "Forklift Model"),
                 ("锂电池型号", "Battery Model"),
@@ -50,7 +56,7 @@ def api_recommend():
                         show["锂电池型号"] = show[alt]
                         break
             # 对应铅酸电池电压(V)字段名修正（兼容所有繁体和简体写法）
-            for wrong in ["对应铅酸電池電壓(V)", "对应铅酸電壓(V)", "对应铅酸电池電壓(V)"]:
+            for wrong in ["对应铅酸電池电压(V)", "对应铅酸电池電壓(V)", "对应铅酸電池電壓(V)", "对应铅酸電壓(V)"]:
                 if wrong in show:
                     show["对应铅酸电池电压(V)"] = show.pop(wrong)
             # 容量(Ah)不带小数
@@ -67,6 +73,19 @@ def api_recommend():
                 v = show.get(k, "-")
                 table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">{th}</th>' \
                          f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{v}</td></tr>'
+            # 折扣价
+            if discount is not None:
+                try:
+                    hz = float(show.get("惠州出厂价(USD)", 0))
+                    nl = float(show.get("荷兰EXW出货价(EUR)", 0))
+                    hz_discount = hz * discount / 100
+                    nl_discount = nl * discount / 100
+                    table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">惠州出厂价(USD)<span style="color:#888;font-size:12px;">&nbsp;(不含VAT税费)</span> 折扣价</th>' \
+                             f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{hz_discount:.2f}</td></tr>'
+                    table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">荷兰EXW出货价(EUR)<span style="color:#888;font-size:12px;">&nbsp;(不含VAT税费)</span> 折扣价</th>' \
+                             f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{nl_discount:.2f}</td></tr>'
+                except Exception:
+                    pass
             table += '</table>'
             return table
         # 推荐失败友好提示分支
@@ -88,7 +107,7 @@ def api_recommend():
                     result[k] = None
                 if v == 'nan':
                     result[k] = None
-            table_html = format_result_table(result)
+            table_html = format_result_table(result, discount)
             logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw")
             from flask import make_response
             import json
@@ -96,7 +115,7 @@ def api_recommend():
             resp.headers['Content-Type'] = 'application/json; charset=utf-8'
             return resp
         # 兼容极端情况（如返回列表等）
-        table_html = format_result_table({k: v for k, v in enumerate(result)})
+        table_html = format_result_table({k: v for k, v in enumerate(result)}, discount)
         logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw(list)")
         from flask import make_response
         import json
@@ -107,6 +126,17 @@ def api_recommend():
         import traceback
         logging.error(f"[RECOMMEND ERROR] input={input_data} error={e} trace={traceback.format_exc()}")
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+
+@app.route("/api/forklift-models", methods=["GET"])
+def api_forklift_models():
+    import pandas as pd
+    import os
+    csv_path = os.path.join(os.path.dirname(__file__), 'train_data.csv')
+    df = pd.read_csv(csv_path, usecols=["适用叉车型号"])
+    models = df["适用叉车型号"].dropna().unique().tolist()
+    models = list(set([m.strip() for m in models if m and str(m).strip()]))
+    models.sort()
+    return jsonify(models)
 
 if __name__ == "__main__":
     # 生产环境下用debug=False，避免reloader导致nohup后台运行报错
