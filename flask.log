@@ -1,0 +1,16 @@
+ * Serving Flask app 'app'
+ * Debug mode: off
+2025-05-26 18:16:49,182 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://10.21.183.65:8080
+2025-05-26 18:16:49,182 INFO [33mPress CTRL+C to quit[0m
+2025-05-26 18:17:19,804 INFO 127.0.0.1 - - [26/May/2025 18:17:19] "[36mGET / HTTP/1.1[0m" 304 -
+2025-05-26 18:17:52,654 INFO [RECOMMEND OK] input={'适用叉车型号': 'TCM PTF200', '原电池类型': '铅酸电池', '电压(V)': 24, '容量(Ah)': 150, '总重量(kg)': 251, '原电池尺寸(mm)': '727x200x675'} response=table+raw
+2025-05-26 18:17:52,655 INFO 127.0.0.1 - - [26/May/2025 18:17:52] "POST /api/recommend HTTP/1.1" 200 -
+2025-05-26 18:18:02,175 INFO [RECOMMEND OK] input={'适用叉车型号': 'TCM PTF200', '原电池类型': '铅酸电池', '电压(V)': 24, '容量(Ah)': 150, '总重量(kg)': 0, '原电池尺寸(mm)': '727x200x675'} response=table+raw
+2025-05-26 18:18:02,178 INFO 127.0.0.1 - - [26/May/2025 18:18:02] "POST /api/recommend HTTP/1.1" 200 -
+2025-05-26 18:18:05,210 INFO [RECOMMEND OK] input={'适用叉车型号': 'TCM PTF200', '原电池类型': '铅酸电池', '电压(V)': 24, '容量(Ah)': 150, '总重量(kg)': 0, '原电池尺寸(mm)': ''} response=table+raw
+2025-05-26 18:18:05,210 INFO 127.0.0.1 - - [26/May/2025 18:18:05] "POST /api/recommend HTTP/1.1" 200 -
+2025-05-26 18:18:10,724 INFO [RECOMMEND OK] input={'适用叉车型号': 'TCM PTF200', '原电池类型': '铅酸电池', '电压(V)': 24, '容量(Ah)': 0, '总重量(kg)': 0, '原电池尺寸(mm)': ''} response=table+raw
+2025-05-26 18:18:10,724 INFO 127.0.0.1 - - [26/May/2025 18:18:10] "POST /api/recommend HTTP/1.1" 200 -

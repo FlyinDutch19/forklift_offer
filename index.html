@@ -74,21 +74,40 @@
       <h2>叉车锂电池推荐系统</h2>
       <form id="recommendForm">
         <label
-          >适用叉车型号（输入叉车型号，如：Linde T16, Jungheinrich EJE 120, TCM SPW 12 等）
+          >适用叉车型号（输入叉车型号，如：Linde T16, Jungheinrich EJE 120, TCM
+          SPW 12 等）
           <input type="text" name="适用叉车型号" placeholder="如：Linde T16" />
         </label>
         <label
           >原电池类型
           <select name="原电池类型">
-            <option value="">请选择</option>
+            <option value="铅酸电池" selected>铅酸电池</option>
             <option value="锂电池">锂电池</option>
-            <option value="铅酸电池">铅酸电池</option>
           </select>
         </label>
-        <label>电压(V) <input type="number" step="0.1" name="电压(V)" placeholder="如：48" /></label>
-        <label>容量(Ah) <input type="number" step="0.1" name="容量(Ah)" placeholder="如：200" /></label>
-        <label>总重量(kg) <input type="number" step="0.1" name="总重量(kg)" placeholder="如：500" /></label>
-        <label>原电池尺寸(mm) <input type="text" name="原电池尺寸(mm)" placeholder="如：900*400*600" /></label>
+        <label
+          >电压(V)
+          <input type="number" step="0.1" name="电压(V)" placeholder="如：48"
+        /></label>
+        <label
+          >容量(Ah)
+          <input type="number" step="0.1" name="容量(Ah)" placeholder="如：200"
+        /></label>
+        <label
+          >总重量(kg)
+          <input
+            type="number"
+            step="0.1"
+            name="总重量(kg)"
+            placeholder="如：500"
+        /></label>
+        <label
+          >原电池尺寸(mm)
+          <input
+            type="text"
+            name="原电池尺寸(mm)"
+            placeholder="如：900*400*600"
+        /></label>
         <button type="submit">推荐锂电池</button>
       </form>
       <div id="result"></div>
@@ -105,23 +124,60 @@
           "总重量(kg)": parseFloat(form["总重量(kg)"].value) || 0,
           "原电池尺寸(mm)": form["原电池尺寸(mm)"].value,
         };
-        document.getElementById("result").innerHTML = '<span class="loading">正在推荐，请稍候...</span>';
+        // 新增：前端校验，全部为空时提示
+        if (
+          !data["适用叉车型号"] &&
+          !data["电压(V)"] &&
+          !data["容量(Ah)"] &&
+          !data["总重量(kg)"] &&
+          !data["原电池尺寸(mm)"]
+        ) {
+          document.getElementById("result").innerHTML =
+            '<span style="color:red">请输入叉车品牌型号或原铅酸/锂电池信息</span>';
+          return;
+        }
+        document.getElementById("result").innerHTML =
+          '<span class="loading">正在推荐，请稍候...</span>';
         try {
           const res = await fetch("/api/recommend", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
           });
-          const result = await res.json();
-          if (result.table) {
-            document.getElementById("result").innerHTML = `<h3>推荐结果</h3>${result.table}`;
-          } else if (result.error) {
-            document.getElementById("result").innerHTML = `<span style='color:red'>${result.error}<br><pre>${result.trace}</pre></span>`;
+          const raw = await res.text();
+          let result;
+          try {
+            result = JSON.parse(raw);
+          } catch (jsonErr) {
+            console.error("JSON解析失败，原始响应：", raw, jsonErr);
+            throw jsonErr;
+          }
+          if (res.ok) {
+            if (result.table) {
+              document.getElementById(
+                "result"
+              ).innerHTML = `<h3>推荐结果</h3>${result.table}`;
+            } else if (result.error) {
+              document.getElementById(
+                "result"
+              ).innerHTML = `<span style='color:red'>${result.error}<br><pre>${result.trace}</pre></span>`;
+            } else if (result["推荐失败"]) {
+              document.getElementById(
+                "result"
+              ).innerHTML = `<span style='color:red'>${result["推荐失败"]}</span>`;
+            } else {
+              document.getElementById("result").innerHTML =
+                "<span style='color:red'>未知错误</span>";
+            }
           } else {
-            document.getElementById("result").innerHTML = "<span style='color:red'>未知错误</span>";
+            console.error("HTTP错误，原始响应：", raw);
+            document.getElementById("result").innerHTML =
+              '<span style="color:red">服务异常，请稍后重试。</span>';
           }
         } catch (err) {
-          document.getElementById("result").innerHTML = '<span style="color:red">推荐失败，请检查网络或稍后重试。</span>';
+          console.error("推荐异常", err);
+          document.getElementById("result").innerHTML =
+            '<span style="color:red">推荐失败，请检查网络或稍后重试。</span>';
         }
       };
     </script>

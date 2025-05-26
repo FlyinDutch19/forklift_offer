@@ -1,9 +1,18 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from battery_recommend import recommend_battery
+import logging
+import sys
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)
+
+# 设置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 @app.route("/")
 def index():
@@ -60,18 +69,45 @@ def api_recommend():
                          f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{v}</td></tr>'
             table += '</table>'
             return table
+        # 推荐失败友好提示分支
+        if isinstance(result, dict) and "推荐失败" in result:
+            logging.info(f"[RECOMMEND FAIL] input={input_data} response={result}")
+            from flask import make_response
+            import json
+            resp = make_response(json.dumps(result, ensure_ascii=False, allow_nan=False), 200)
+            resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+            return resp
         # 兼容AI推荐分支
         if isinstance(result, dict):
             if "推荐电池型号" in result:
                 result["锂电池型号"] = result.pop("推荐电池型号")
+            # 处理所有NaN为None，避免json.dumps出错
+            import numpy as np
+            for k, v in result.items():
+                if isinstance(v, float) and (np.isnan(v) or v is None):
+                    result[k] = None
+                if v == 'nan':
+                    result[k] = None
             table_html = format_result_table(result)
-            return jsonify({"table": table_html, "raw": result})
+            logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw")
+            from flask import make_response
+            import json
+            resp = make_response(json.dumps({"table": table_html, "raw": result}, ensure_ascii=False, allow_nan=False), 200)
+            resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+            return resp
         # 兼容极端情况（如返回列表等）
         table_html = format_result_table({k: v for k, v in enumerate(result)})
-        return jsonify({"table": table_html, "raw": result})
+        logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw(list)")
+        from flask import make_response
+        import json
+        resp = make_response(json.dumps({"table": table_html, "raw": result}, ensure_ascii=False, allow_nan=False), 200)
+        resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+        return resp
     except Exception as e:
         import traceback
+        logging.error(f"[RECOMMEND ERROR] input={input_data} error={e} trace={traceback.format_exc()}")
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8080)
+    # 生产环境下用debug=False，避免reloader导致nohup后台运行报错
+    app.run(debug=False, host="0.0.0.0", port=8080)
