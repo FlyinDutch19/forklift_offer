@@ -106,8 +106,12 @@
           <input
             type="text"
             name="原电池尺寸(mm)"
-            placeholder="如：900*400*600"
+            placeholder="如：900x400x600"
         /></label>
+        <label>
+          折扣率(%)
+          <input type="number" name="折扣率(%)" min="0" max="100" step="0.1" placeholder="100" value="100" />
+        </label>
         <button type="submit">推荐锂电池</button>
       </form>
       <div id="result"></div>
@@ -123,6 +127,7 @@
           "容量(Ah)": parseFloat(form["容量(Ah)"].value) || 0,
           "总重量(kg)": parseFloat(form["总重量(kg)"].value) || 0,
           "原电池尺寸(mm)": form["原电池尺寸(mm)"].value,
+          "折扣率(%)": parseFloat(form["折扣率(%)"].value) || 100,
         };
         // 新增：前端校验，全部为空时提示
         if (
@@ -180,6 +185,53 @@
             '<span style="color:red">推荐失败，请检查网络或稍后重试。</span>';
         }
       };
+      // --- 联想/自动补全 ---
+      const modelInput = document.querySelector('input[name="适用叉车型号"]');
+      let forkliftModels = [];
+      let suggestionBox;
+      // 获取型号列表
+      fetch('/api/forklift-models').then(r=>r.json()).then(list=>{forkliftModels=list;});
+      // 创建下拉提示框
+      function createSuggestionBox() {
+        suggestionBox = document.createElement('div');
+        suggestionBox.style.position = 'absolute';
+        suggestionBox.style.background = '#fff';
+        suggestionBox.style.border = '1px solid #bfc9d1';
+        suggestionBox.style.zIndex = 1000;
+        suggestionBox.style.maxHeight = '180px';
+        suggestionBox.style.overflowY = 'auto';
+        suggestionBox.style.width = modelInput.offsetWidth + 'px';
+        suggestionBox.style.fontSize = '15px';
+        suggestionBox.style.boxShadow = '0 2px 8px #e0e0e0';
+        suggestionBox.style.borderRadius = '0 0 6px 6px';
+        suggestionBox.style.display = 'none';
+        document.body.appendChild(suggestionBox);
+      }
+      createSuggestionBox();
+      // 监听输入
+      modelInput.addEventListener('input', function() {
+        const val = this.value.trim().toLowerCase();
+        if (!val) { suggestionBox.style.display = 'none'; return; }
+        const matched = forkliftModels.filter(m=>m.toLowerCase().includes(val)).slice(0, 10);
+        if (matched.length === 0) { suggestionBox.style.display = 'none'; return; }
+        suggestionBox.innerHTML = matched.map(m=>`<div style='padding:6px 12px;cursor:pointer;'>${m}</div>`).join('');
+        const rect = modelInput.getBoundingClientRect();
+        suggestionBox.style.left = rect.left + window.scrollX + 'px';
+        suggestionBox.style.top = rect.bottom + window.scrollY + 'px';
+        suggestionBox.style.display = 'block';
+      });
+      // 选择建议
+      suggestionBox.addEventListener('mousedown', function(e) {
+        if (e.target && e.target.nodeName === 'DIV') {
+          modelInput.value = e.target.textContent;
+          suggestionBox.style.display = 'none';
+          modelInput.dispatchEvent(new Event('input'));
+        }
+      });
+      // 失焦隐藏
+      modelInput.addEventListener('blur', function() {
+        setTimeout(()=>{suggestionBox.style.display='none';}, 120);
+      });
     </script>
   </body>
 </html>
