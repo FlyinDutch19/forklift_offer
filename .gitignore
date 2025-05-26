@@ -6,3 +6,5 @@ __pycache__/
 *.pyd
 .env.*
 .DS_Store
+训练文件/
+*.xlsx
