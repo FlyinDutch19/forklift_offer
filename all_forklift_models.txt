@@ -1,0 +1,63 @@
+8FBE18
+CAT 2EP10000-80V
+CAT NSP16
+Clark GEX30S
+Clark OSX15
+Clark SRX16
+Combilift CBE3000
+Combilift MR
+Crown ESR-1240-1.4
+Crown F5745-65
+Crown FC 2,5t
+Crown FC5725
+Crown RMD6025
+Crown RR
+Crown TSP1000
+Crown TSP1000-1.0
+Crown W-3280-2.0
+Hyster B60
+Hyster E100XN
+Hyster E120XN
+Hyster E45-60XN
+Hyster E50XN-28
+Hyster E80XN
+Hyster J1.6XN LWB
+Hyster J1.8XN
+Hyster J2.0XN
+Hyster J2.5GX
+Hyster J40XN
+Hyster N45ZR3
+Hyster P1.6
+Hyster R1.4
+Hyster W20ZR
+Hyundai
+Hyundai 20BT-9U
+Hyundai 30B-9U
+Jungheinrich EKS314
+Jungheinrich ERE120
+Komatsu FE30
+Linde 386 E14
+Linde 386 E20PH
+Linde E20PH EVO 386-02
+Linde R20
+Linde T20
+M
+Manitou ER16HD
+Omega
+RD
+Still EXV-12C
+Still RX20-20P Still
+Stocklin high-lift truck EDI12
+Sumitomo
+TCM SPW
+Toyota 7
+Toyota 7FBH18
+Toyota 7HBW23
+Toyota 8FB25
+W25ZC
+W30ZR
+Yale ERC065VG
+Yale ERP20VF LWB
+Yale MPE080G
+Yale MRW030
+Yale NTA030SB

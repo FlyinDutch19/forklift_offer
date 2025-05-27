@@ -25,6 +25,14 @@ def index():
 def api_recommend():
     input_data = request.json
     try:
+        # 处理单体电芯容量可选项
+        cell_caps = input_data.get("单体电芯容量可选项")
+        if cell_caps:
+            try:
+                cell_caps_list = [int(x.strip()) for x in cell_caps.split(",") if x.strip().isdigit()]
+                input_data["单体电芯容量可选项"] = cell_caps_list
+            except Exception:
+                input_data["单体电芯容量可选项"] = []
         result = recommend_battery(input_data)
         discount = None
         if "折扣率(%)" in input_data:
@@ -36,10 +44,12 @@ def api_recommend():
             fields = [
                 ("适用叉车型号", "Forklift Model"),
                 ("锂电池型号", "Battery Model"),
+                ("电芯品牌", "Cell Brand"),
                 ("电压(V)", "Voltage (V)"),
                 ("对应铅酸电池电压(V)", "Lead-acid Battery Voltage (V)"),
                 ("容量(Ah)", "Capacity (Ah)"),
                 ("单体电芯容量(Ah)", "Cell Capacity (Ah)"),
+                ("模组串并联方式", "Module Configuration (S/P)"),
                 ("尺寸(mm)", "Dimensions (mm)"),
                 ("总重量(kg)", "Total Weight (kg)"),
                 ("含配重(kg)", "Counterweight (kg)"),
@@ -89,6 +99,8 @@ def api_recommend():
             table += '</table>'
             return table
         # 推荐失败友好提示分支
+        if result is None:
+            return jsonify({"error": "系统异常，未能获取推荐结果。"}), 500
         if isinstance(result, dict) and "推荐失败" in result:
             logging.info(f"[RECOMMEND FAIL] input={input_data} response={result}")
             from flask import make_response
@@ -115,13 +127,16 @@ def api_recommend():
             resp.headers['Content-Type'] = 'application/json; charset=utf-8'
             return resp
         # 兼容极端情况（如返回列表等）
-        table_html = format_result_table({k: v for k, v in enumerate(result)}, discount)
-        logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw(list)")
-        from flask import make_response
-        import json
-        resp = make_response(json.dumps({"table": table_html, "raw": result}, ensure_ascii=False, allow_nan=False), 200)
-        resp.headers['Content-Type'] = 'application/json; charset=utf-8'
-        return resp
+        if isinstance(result, list):
+            table_html = format_result_table({k: v for k, v in enumerate(result)}, discount)
+            logging.info(f"[RECOMMEND OK] input={input_data} response=table+raw(list)")
+            from flask import make_response
+            import json
+            resp = make_response(json.dumps({"table": table_html, "raw": result}, ensure_ascii=False, allow_nan=False), 200)
+            resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+            return resp
+        # 其它未知类型，直接返回错误
+        return jsonify({"error": "系统异常，未能获取推荐结果。"}), 500
     except Exception as e:
         import traceback
         logging.error(f"[RECOMMEND ERROR] input={input_data} error={e} trace={traceback.format_exc()}")
@@ -129,12 +144,20 @@ def api_recommend():
 
 @app.route("/api/forklift-models", methods=["GET"])
 def api_forklift_models():
-    import pandas as pd
+    # 优先从all_forklift_models.txt加载全集合
     import os
+    txt_path = os.path.join(os.path.dirname(__file__), 'all_forklift_models.txt')
+    if os.path.exists(txt_path):
+        with open(txt_path, encoding="utf-8") as f:
+            models = [line.strip() for line in f if line.strip() and line.strip() != "N/A"]
+        models = sorted(set(models))
+        return jsonify(models)
+    # 兜底：从train_data.csv加载
+    import pandas as pd
     csv_path = os.path.join(os.path.dirname(__file__), 'train_data.csv')
     df = pd.read_csv(csv_path, usecols=["适用叉车型号"])
     models = df["适用叉车型号"].dropna().unique().tolist()
-    models = list(set([m.strip() for m in models if m and str(m).strip()]))
+    models = list(set([m.strip() for m in models if m and str(m).strip() and m != "N/A"]))
     models.sort()
     return jsonify(models)
 
