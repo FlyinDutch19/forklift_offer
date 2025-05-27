@@ -41,61 +41,52 @@ def api_recommend():
             except Exception:
                 discount = None
         def format_result_table(result_dict, discount=None):
-            fields = [
-                ("适用叉车型号", "Forklift Model"),
-                ("锂电池型号", "Battery Model"),
-                ("电芯品牌", "Cell Brand"),
-                ("电压(V)", "Voltage (V)"),
-                ("对应铅酸电池电压(V)", "Lead-acid Battery Voltage (V)"),
-                ("容量(Ah)", "Capacity (Ah)"),
-                ("单体电芯容量(Ah)", "Cell Capacity (Ah)"),
-                ("模组串并联方式", "Module Configuration (S/P)"),
-                ("尺寸(mm)", "Dimensions (mm)"),
-                ("总重量(kg)", "Total Weight (kg)"),
-                ("含配重(kg)", "Counterweight (kg)"),
-                ("惠州出厂价(USD)", "Huizhou Price (USD)"),
-                ("荷兰EXW出货价(EUR)", "Netherlands EXW (EUR)"),
-                ("汇率(USD/EUR)", "USD/EUR Rate")
-            ]
-            # 字段修正和格式化
             show = dict(result_dict)
-            # 锂电池型号兼容推荐电池型号和型号字段
-            if (not show.get("锂电池型号")):
-                for alt in ["推荐电池型号", "型号", "电池型号"]:
-                    if show.get(alt):
-                        show["锂电池型号"] = show[alt]
-                        break
-            # 对应铅酸电池电压(V)字段名修正（兼容所有繁体和简体写法）
-            for wrong in ["对应铅酸電池电压(V)", "对应铅酸电池電壓(V)", "对应铅酸電池電壓(V)", "对应铅酸電壓(V)"]:
-                if wrong in show:
-                    show["对应铅酸电池电压(V)"] = show.pop(wrong)
-            # 容量(Ah)不带小数
-            if "容量(Ah)" in show:
-                try:
-                    show["容量(Ah)"] = str(int(float(show["容量(Ah)"])) )
-                except Exception:
-                    pass
-            table = '<table style="border-collapse:separate;border-spacing:0 8px;min-width:520px;width:98%;">'
-            for k, _ in fields:
-                th = k
-                if k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)"]:
-                    th = f"{k}<span style='color:#888;font-size:12px;'>&nbsp;(不含VAT税费)</span>"
-                v = show.get(k, "-")
-                table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">{th}</th>' \
+            # 字段顺序与映射
+            field_map = [
+                ("适用叉车型号", "适用叉车型号"),
+                ("锂电池型号", "锂电池型号"),
+                ("电芯品牌", "电芯品牌"),
+                ("电压(V)", "电压(V)"),
+                ("对应铅酸电池电压(V)", "对应铅酸电池电压(V)"),
+                ("容量(Ah)", "容量(Ah)"),
+                ("单体电芯容量(Ah)", "单体电芯容量(Ah)"),
+                ("模组串并联方式", "模组串并联方式"),
+                ("模组配置(串S并P联）", "模组配置(串S并P联）"), # 兼容老字段
+                ("尺寸(mm)", "尺寸(mm)"),
+                ("总重量(kg)", "总重量(kg)"),
+                ("含配重(kg)", "含配重(kg)"),
+                ("惠州出厂价(USD)", "惠州出厂价(USD)折后价（不含VAT税）"),
+                ("荷兰EXW出货价(EUR)", "荷兰EXW出货价(EUR)折后价（不含VAT税）"),
+                ("汇率(USD/EUR)", "汇率(USD/EUR)")
+            ]
+            table = '<table style="border-collapse:separate;border-spacing:0 8px;min-width:420px;width:80%;">'
+            for k, k2 in field_map:
+                # 模组串并联方式优先显示新字段，否则用老字段
+                if k == "模组串并联方式":
+                    v = show.get("模组串并联方式") or show.get("模组配置(串S并P联）") or "-"
+                # 价格字段显示折扣价
+                elif k == "惠州出厂价(USD)":
+                    try:
+                        hz = float(show.get("惠州出厂价(USD)", 0))
+                        hz_discount = hz * discount / 100 if discount is not None else hz
+                        v = f"{hz_discount:.2f}"
+                    except Exception:
+                        v = "-"
+                elif k == "荷兰EXW出货价(EUR)":
+                    try:
+                        nl = float(show.get("荷兰EXW出货价(EUR)", 0))
+                        nl_discount = nl * discount / 100 if discount is not None else nl
+                        v = f"{nl_discount:.2f}"
+                    except Exception:
+                        v = "-"
+                else:
+                    v = show.get(k) if show.get(k) not in [None, "", "nan"] else "-"
+                # 跳过不存在的老字段
+                if k == "模组配置(串S并P联）":
+                    continue
+                table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">{k2}</th>' \
                          f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{v}</td></tr>'
-            # 折扣价
-            if discount is not None:
-                try:
-                    hz = float(show.get("惠州出厂价(USD)", 0))
-                    nl = float(show.get("荷兰EXW出货价(EUR)", 0))
-                    hz_discount = hz * discount / 100
-                    nl_discount = nl * discount / 100
-                    table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">惠州出厂价(USD)<span style="color:#888;font-size:12px;">&nbsp;(不含VAT税费)</span> 折扣价</th>' \
-                             f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{hz_discount:.2f}</td></tr>'
-                    table += f'<tr><th style="text-align:right;vertical-align:top;font-weight:bold;padding:8px 18px 8px 0;background:#f6f6f6;font-size:16px;width:220px;">荷兰EXW出货价(EUR)<span style="color:#888;font-size:12px;">&nbsp;(不含VAT税费)</span> 折扣价</th>' \
-                             f'<td style="text-align:left;vertical-align:top;font-weight:normal;padding:8px 0 8px 8px;font-size:16px;">{nl_discount:.2f}</td></tr>'
-                except Exception:
-                    pass
             table += '</table>'
             return table
         # 推荐失败友好提示分支
@@ -106,6 +97,26 @@ def api_recommend():
             from flask import make_response
             import json
             resp = make_response(json.dumps(result, ensure_ascii=False, allow_nan=False), 200)
+            resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+            return resp
+        # 兼容推荐结果为多条（dict嵌套dict）
+        if isinstance(result, dict) and all(isinstance(v, dict) for v in result.values()):
+            tables = []
+            raw_results = {}
+            for idx, (k, v) in enumerate(result.items(), 1):
+                # 处理所有NaN为None，避免json.dumps出错
+                import numpy as np
+                for kk, vv in v.items():
+                    if isinstance(vv, float) and (np.isnan(vv) or vv is None):
+                        v[kk] = None
+                    if vv == 'nan':
+                        v[kk] = None
+                table_html = format_result_table(v, discount)
+                tables.append(f'<h4 style="margin-top:18px;">{k}</h4>' + table_html)
+                raw_results[k] = v
+            from flask import make_response
+            import json
+            resp = make_response(json.dumps({"table": "<br>".join(tables), "raw": raw_results}, ensure_ascii=False, allow_nan=False), 200)
             resp.headers['Content-Type'] = 'application/json; charset=utf-8'
             return resp
         # 兼容AI推荐分支
