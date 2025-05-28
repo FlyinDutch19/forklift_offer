@@ -74,9 +74,8 @@
       <h2>叉车锂电池推荐系统</h2>
       <form id="recommendForm">
         <label
-          >适用叉车型号（输入叉车型号，如：Linde T16, Jungheinrich EJE 120, TCM
-          SPW 12 等）
-          <input type="text" name="适用叉车型号" placeholder="如：Linde T16" />
+          >适用叉车型号（输入叉车型号，如：Yale MRW030, Manitou ER16HD, Linde 386 E14 等）
+          <input type="text" name="适用叉车型号" placeholder="如：Yale MRW030" />
         </label>
         <label
           >原电池类型
@@ -134,10 +133,33 @@
         <label>
           电芯品牌
           <select name="电芯品牌" required>
-            <option value="全部" selected>全部</option>
-            <option value="瑞浦">瑞浦</option>
+            <option value="瑞浦" selected>瑞浦</option>
             <option value="EVE">EVE</option>
           </select>
+        </label>
+        <label>
+          惠州出厂价(USD)（不含VAT税）
+          <input
+            type="number"
+            name="惠州出厂价(USD)（不含VAT税）"
+            step="0.01"
+            value="230"
+            placeholder="230"
+            style="width:120px;"
+          />
+          <span style="margin-left:8px;color:#888;font-size:14px;">USD/KWH</span>
+        </label>
+        <label>
+          惠州配重出厂价(USD)（不含VAT税）
+          <input
+            type="number"
+            name="惠州配重出厂价(USD)（不含VAT税）"
+            step="0.01"
+            value="1.5"
+            placeholder="1.5"
+            style="width:120px;"
+          />
+          <span style="margin-left:8px;color:#888;font-size:14px;">USD/KG</span>
         </label>
         <button type="submit">推荐锂电池</button>
       </form>
@@ -156,6 +178,8 @@
           "原电池尺寸(mm)": form["原电池尺寸(mm)"].value,
           "折扣率(%)": parseFloat(form["折扣率(%)"].value) || 100,
           "电芯品牌": form["电芯品牌"].value,
+          "惠州出厂价(USD)（不含VAT税）": parseFloat(form["惠州出厂价(USD)（不含VAT税）"].value) || 230,
+          "惠州配重出厂价(USD)（不含VAT税）": parseFloat(form["惠州配重出厂价(USD)（不含VAT税）"].value) || 1.5,
         };
         // 新增：前端校验，全部为空时提示
         if (
