@@ -74,8 +74,13 @@
       <h2>叉车锂电池推荐系统</h2>
       <form id="recommendForm">
         <label
-          >适用叉车型号（输入叉车型号，如：Yale MRW030, Manitou ER16HD, Linde 386 E14 等）
-          <input type="text" name="适用叉车型号" placeholder="如：Yale MRW030" />
+          >适用叉车型号（输入叉车型号，如：Yale MRW030, Manitou ER16HD, Linde
+          386 E14 等）
+          <input
+            type="text"
+            name="适用叉车型号"
+            placeholder="如：Yale MRW030"
+          />
         </label>
         <label
           >原电池类型
@@ -100,10 +105,10 @@
             name="总重量(kg)"
             placeholder="如：500"
         /></label>
-        <div style="display: flex; align-items: center; margin-top: 18px;">
+        <div style="display: flex; align-items: center; margin-top: 18px">
           <label
             for="size"
-            style="margin: 0 12px 0 0; font-weight: bold; white-space: nowrap;"
+            style="margin: 0 12px 0 0; font-weight: bold; white-space: nowrap"
             >原电池尺寸(mm)</label
           >
           <input
@@ -115,7 +120,7 @@
             title="如：900x400x600，分隔符可为x、*、×、X"
             oninput="this.value=this.value.replace(/[*×X]/g,'x')"
             onblur="this.value=this.value.replace(/\s+/g,'').replace(/[*×X]/g,'x')"
-            style="width: 220px; margin: 0;"
+            style="width: 220px; margin: 0"
           />
         </div>
         <label>
@@ -145,9 +150,11 @@
             step="0.01"
             value="230"
             placeholder="230"
-            style="width:120px;"
+            style="width: 120px"
           />
-          <span style="margin-left:8px;color:#888;font-size:14px;">USD/KWH</span>
+          <span style="margin-left: 8px; color: #888; font-size: 14px"
+            >USD/KWH</span
+          >
         </label>
         <label>
           惠州配重出厂价(USD)（不含VAT税）
@@ -157,9 +164,22 @@
             step="0.01"
             value="1.5"
             placeholder="1.5"
-            style="width:120px;"
+            style="width: 120px"
           />
-          <span style="margin-left:8px;color:#888;font-size:14px;">USD/KG</span>
+          <span style="margin-left: 8px; color: #888; font-size: 14px"
+            >USD/KG</span
+          >
+        </label>
+        <label>
+          欧元/美元(EUR/USD)汇率
+          <input
+            type="number"
+            name="汇率(EUR/USD)"
+            step="0.0001"
+            value="1.1"
+            placeholder="1.1"
+            style="width: 120px"
+          />
         </label>
         <button type="submit">推荐锂电池</button>
       </form>
@@ -177,9 +197,12 @@
           "总重量(kg)": parseFloat(form["总重量(kg)"].value) || 0,
           "原电池尺寸(mm)": form["原电池尺寸(mm)"].value,
           "折扣率(%)": parseFloat(form["折扣率(%)"].value) || 100,
-          "电芯品牌": form["电芯品牌"].value,
-          "惠州出厂价(USD)（不含VAT税）": parseFloat(form["惠州出厂价(USD)（不含VAT税）"].value) || 230,
-          "惠州配重出厂价(USD)（不含VAT税）": parseFloat(form["惠州配重出厂价(USD)（不含VAT税）"].value) || 1.5,
+          电芯品牌: form["电芯品牌"].value,
+          "惠州出厂价(USD)（不含VAT税）":
+            parseFloat(form["惠州出厂价(USD)（不含VAT税）"].value) || 230,
+          "惠州配重出厂价(USD)（不含VAT税）":
+            parseFloat(form["惠州配重出厂价(USD)（不含VAT税）"].value) || 1.5,
+          "汇率(EUR/USD)": parseFloat(form["汇率(EUR/USD)"].value) || 1.1,
         };
         // 新增：前端校验，全部为空时提示
         if (
@@ -215,47 +238,95 @@
             let detail = "";
             if (rawObj && (rawObj["电池详情"] || rawObj["型号说明"])) {
               const detailText = rawObj["电池详情"] || rawObj["型号说明"];
-              const detailId = `detail_${keyPrefix || ''}_${Math.random().toString(36).slice(2,8)}`;
-              detail = `<div style='margin-top:8px;'><button type='button' class='show-detail-btn' data-detail='${detailId}' style='background:#eee;color:#2d7be5;border:1px solid #bfc9d1;padding:4px 16px;border-radius:4px;cursor:pointer;font-size:15px;'>查看详情</button><div id='${detailId}' style='display:none;margin-top:8px;padding:10px 14px;background:#f6f8fa;border-radius:6px;border:1px solid #e0e0e0;font-size:15px;white-space:pre-line;'>${escapeHtml(detailText)}</div></div>`;
+              const detailId = `detail_${keyPrefix || ""}_${Math.random()
+                .toString(36)
+                .slice(2, 8)}`;
+              detail = `<div style='margin-top:8px;'><button type='button' class='show-detail-btn' data-detail='${detailId}' style='background:#eee;color:#2d7be5;border:1px solid #bfc9d1;padding:4px 16px;border-radius:4px;cursor:pointer;font-size:15px;'>查看详情</button><div id='${detailId}' style='display:none;margin-top:8px;padding:10px 14px;background:#f6f8fa;border-radius:6px;border:1px solid #e0e0e0;font-size:15px;white-space:pre-line;'>${escapeHtml(
+                detailText
+              )}</div></div>`;
             }
             return tableHtml + detail;
           }
           function escapeHtml(str) {
             if (!str) return "";
             return str.replace(/[&<>"']/g, function (c) {
-              return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'}[c]||c;
+              return (
+                {
+                  "&": "&amp;",
+                  "<": "&lt;",
+                  ">": "&gt;",
+                  '"': "&quot;",
+                  "'": "&#39;",
+                }[c] || c
+              );
             });
+          }
+          // --- 渲染推荐结果时去掉“汇率(EUR/USD)”字段 ---
+          function removeRateField(obj) {
+            if (!obj) return obj;
+            if (Array.isArray(obj)) {
+              return obj.map(removeRateField);
+            }
+            if (typeof obj === 'object') {
+              const o = { ...obj };
+              delete o["汇率(EUR/USD)"];
+              delete o["汇率(USD/EUR)"];
+              Object.keys(o).forEach(k => { if (k.includes('汇率')) delete o[k]; });
+              return o;
+            }
+            return obj;
+          }
+          // --- 过滤table中“汇率”相关行（更强匹配，移除所有含“汇率”字样的<tr>） ---
+          function removeRateRowFromTable(tableHtml) {
+            return tableHtml.replace(/<tr[^>]*>[^<]*汇率[^<]*<\/tr>/gi, '');
           }
           if (res.ok) {
             if (result.table) {
-              // 多条推荐时 raw 是对象，单条推荐时 raw 也是对象
               let html = `<h3>推荐结果</h3>`;
-              if (result.raw && typeof result.raw === 'object' && !Array.isArray(result.raw)) {
-                // 多条推荐
+              if (
+                result.raw &&
+                typeof result.raw === "object" &&
+                !Array.isArray(result.raw)
+              ) {
                 const keys = Object.keys(result.raw);
-                if (keys.length > 1 && keys.every(k => typeof result.raw[k] === 'object')) {
+                if (
+                  keys.length > 1 &&
+                  keys.every((k) => typeof result.raw[k] === "object")
+                ) {
                   keys.forEach((k, idx) => {
-                    html += `<div style='margin-bottom:32px;'><h4 style='margin-top:18px;'>${escapeHtml(k)}</h4>` + renderWithDetail(result.table.split(/<h4[^>]*>.*?<\/h4>/)[idx+1] || result.table, result.raw[k], k) + `</div>`;
+                    html +=
+                      `<div style='margin-bottom:32px;'><h4 style='margin-top:18px;'>${escapeHtml(
+                        k
+                      )}</h4>` +
+                      renderWithDetail(
+                        removeRateRowFromTable(result.table.split(/<h4[^>]*>.*?<\/h4>/)[idx + 1] || result.table),
+                        removeRateField(result.raw[k]),
+                        k
+                      ) +
+                      `</div>`;
                   });
                 } else {
-                  // 单条推荐
-                  html += renderWithDetail(result.table, result.raw, "");
+                  html += renderWithDetail(
+                    removeRateRowFromTable(result.table),
+                    removeRateField(result.raw),
+                    ""
+                  );
                 }
               } else {
-                html += result.table;
+                html += removeRateRowFromTable(result.table);
               }
               document.getElementById("result").innerHTML = html;
               // 绑定按钮事件
-              document.querySelectorAll('.show-detail-btn').forEach(btn => {
-                btn.onclick = function() {
-                  const did = btn.getAttribute('data-detail');
+              document.querySelectorAll(".show-detail-btn").forEach((btn) => {
+                btn.onclick = function () {
+                  const did = btn.getAttribute("data-detail");
                   const d = document.getElementById(did);
-                  if (d.style.display === 'none') {
-                    d.style.display = '';
-                    btn.textContent = '收起详情';
+                  if (d.style.display === "none") {
+                    d.style.display = "";
+                    btn.textContent = "收起详情";
                   } else {
-                    d.style.display = 'none';
-                    btn.textContent = '查看详情';
+                    d.style.display = "none";
+                    btn.textContent = "查看详情";
                   }
                 };
               });
