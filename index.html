@@ -209,11 +209,56 @@
             console.error("JSON解析失败，原始响应：", raw, jsonErr);
             throw jsonErr;
           }
+          // --- 新增详情按钮逻辑 ---
+          function renderWithDetail(tableHtml, rawObj, keyPrefix) {
+            // keyPrefix: 推荐结果1/2/3... 或空串
+            let detail = "";
+            if (rawObj && (rawObj["电池详情"] || rawObj["型号说明"])) {
+              const detailText = rawObj["电池详情"] || rawObj["型号说明"];
+              const detailId = `detail_${keyPrefix || ''}_${Math.random().toString(36).slice(2,8)}`;
+              detail = `<div style='margin-top:8px;'><button type='button' class='show-detail-btn' data-detail='${detailId}' style='background:#eee;color:#2d7be5;border:1px solid #bfc9d1;padding:4px 16px;border-radius:4px;cursor:pointer;font-size:15px;'>查看详情</button><div id='${detailId}' style='display:none;margin-top:8px;padding:10px 14px;background:#f6f8fa;border-radius:6px;border:1px solid #e0e0e0;font-size:15px;white-space:pre-line;'>${escapeHtml(detailText)}</div></div>`;
+            }
+            return tableHtml + detail;
+          }
+          function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/[&<>"']/g, function (c) {
+              return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'}[c]||c;
+            });
+          }
           if (res.ok) {
             if (result.table) {
-              document.getElementById(
-                "result"
-              ).innerHTML = `<h3>推荐结果</h3>${result.table}`;
+              // 多条推荐时 raw 是对象，单条推荐时 raw 也是对象
+              let html = `<h3>推荐结果</h3>`;
+              if (result.raw && typeof result.raw === 'object' && !Array.isArray(result.raw)) {
+                // 多条推荐
+                const keys = Object.keys(result.raw);
+                if (keys.length > 1 && keys.every(k => typeof result.raw[k] === 'object')) {
+                  keys.forEach((k, idx) => {
+                    html += `<div style='margin-bottom:32px;'><h4 style='margin-top:18px;'>${escapeHtml(k)}</h4>` + renderWithDetail(result.table.split(/<h4[^>]*>.*?<\/h4>/)[idx+1] || result.table, result.raw[k], k) + `</div>`;
+                  });
+                } else {
+                  // 单条推荐
+                  html += renderWithDetail(result.table, result.raw, "");
+                }
+              } else {
+                html += result.table;
+              }
+              document.getElementById("result").innerHTML = html;
+              // 绑定按钮事件
+              document.querySelectorAll('.show-detail-btn').forEach(btn => {
+                btn.onclick = function() {
+                  const did = btn.getAttribute('data-detail');
+                  const d = document.getElementById(did);
+                  if (d.style.display === 'none') {
+                    d.style.display = '';
+                    btn.textContent = '收起详情';
+                  } else {
+                    d.style.display = 'none';
+                    btn.textContent = '查看详情';
+                  }
+                };
+              });
             } else if (result.error) {
               document.getElementById(
                 "result"
