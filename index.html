@@ -294,12 +294,16 @@
                   keys.every((k) => typeof result.raw[k] === "object")
                 ) {
                   keys.forEach((k, idx) => {
+                    // 移除多余空行：去除表格和按钮之间的 <br> 或空 div
+                    let tableHtml = removeRateRowFromTable(result.table.split(/<h4[^>]*>.*?<\/h4>/)[idx + 1] || result.table)
+                      .replace(/(<\/table>)(\s*<br\s*\/?>)*/gi, '$1')
+                      .replace(/(<\/table>)(\s*<div)/gi, '$1<div');
                     html +=
                       `<div style='margin-bottom:32px;'><h4 style='margin-top:18px;'>${escapeHtml(
                         k
                       )}</h4>` +
                       renderWithDetail(
-                        removeRateRowFromTable(result.table.split(/<h4[^>]*>.*?<\/h4>/)[idx + 1] || result.table),
+                        tableHtml,
                         removeRateField(result.raw[k]),
                         k
                       ) +
