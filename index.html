@@ -276,9 +276,9 @@
             }
             return obj;
           }
-          // --- 过滤table中“汇率”相关行（更强匹配，移除所有含“汇率”字样的<tr>） ---
+          // --- 过滤table中“汇率”相关行（更安全，仅移除<th>或<td>内含“汇率”字样的<tr>，保留其它内容） ---
           function removeRateRowFromTable(tableHtml) {
-            return tableHtml.replace(/<tr[^>]*>[^<]*汇率[^<]*<\/tr>/gi, '');
+            return tableHtml.replace(/<tr[^>]*>\s*<th[^>]*>[^<]*?汇率[^<]*?<\/th>.*?<\/tr>/gi, '');
           }
           if (res.ok) {
             if (result.table) {
