@@ -21,6 +21,18 @@ def recommend_battery(input_data, _is_fallback=False):
     return: 推荐结果dict，或推荐失败信息
     """
     try:
+        # 0. 读取汇率，优先用 input_data 传入的 EUR/USD 汇率
+        eur_usd_rate = None
+        for k in ["汇率(EUR/USD)", "EUR/USD", "eur_usd_rate"]:
+            if k in input_data:
+                try:
+                    eur_usd_rate = float(input_data[k])
+                    break
+                except Exception:
+                    pass
+        if not eur_usd_rate or eur_usd_rate <= 0:
+            eur_usd_rate = EUR_USD_RATE
+
         # 1. 解析输入尺寸、重量
         # 解析原电池尺寸，允许x/X/×/*分隔，全部转为x
         input_size_tuple = parse_battery_size(input_data.get("原电池尺寸(mm)", ""))
@@ -126,10 +138,10 @@ def recommend_battery(input_data, _is_fallback=False):
                     # 计算KWH
                     kwh = safe_float(result.get("电压(V)", 0)) * safe_float(result.get("容量(Ah)", 0)) / 1000
                     hz_price = hz_base * kwh + counter_weight * hz_weight_base
-                    nl_price = hz_price * 1.2 / EUR_USD_RATE
+                    nl_price = hz_price * 1.2 / eur_usd_rate
                     result["惠州出厂价(USD)"] = f"{hz_price:.2f}"
                     result["荷兰EXW出货价(EUR)"] = f"{nl_price:.2f}"
-                    result["汇率(USD/EUR)"] = f"1 EUR = {EUR_USD_RATE:.4f} USD"
+                    # 删除 result["汇率(USD/EUR)"] 字段
                     # 尺寸格式化
                     if "尺寸(mm)" in result and isinstance(result["尺寸(mm)"], str):
                         size_str = result["尺寸(mm)"].replace("×", "x").replace("*", "x").replace("X", "x")
@@ -137,7 +149,7 @@ def recommend_battery(input_data, _is_fallback=False):
                         while len(parts) < 3:
                             parts.append("-")
                         result["尺寸(mm)"] = "x".join(parts[:3])
-                    for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)", "汇率(USD/EUR)"]:
+                    for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)"]:
                         v = result.pop(k)
                         result[k] = v
                     results[f"推荐结果{len(results)+1}"] = result
@@ -148,13 +160,29 @@ def recommend_battery(input_data, _is_fallback=False):
         # 5. 原电池类型与参数推荐
         if "原电池类型" in input_data and input_data["原电池类型"] == "锂电池":
             cond = np.ones(len(df_brand), dtype=bool)
+            input_voltage = None
             if input_data.get("电压(V)"):
-                cond &= np.isclose(df_brand["电压(V)"], input_data.get("电压(V)", 0), atol=2)
+                input_voltage = float(input_data["电压(V)"])
+                # 先尝试精确匹配
+                cond &= np.isclose(df_brand["电压(V)"], input_voltage, atol=2)
             if input_data.get("容量(Ah)"):
                 cond &= np.isclose(df_brand["容量(Ah)"], input_data.get("容量(Ah)", 0), atol=5)
             if input_data.get("总重量(kg)"):
                 cond &= np.isclose(df_brand["总重量(kg)"], input_data.get("总重量(kg)", 0), atol=5)
             match = df_brand[cond]
+            # 智能电压映射：如无精确匹配且输入电压为常见铅酸电压，则自动映射到最接近的锂电池电压
+            if (input_voltage is not None) and match.empty:
+                all_voltages = sorted(df_brand["电压(V)"].unique())
+                mapped_voltage = min(all_voltages, key=lambda v: abs(v - input_voltage))
+                # 只有当差值大于1才做映射，防止51.2输成51时被强行映射
+                if abs(mapped_voltage - input_voltage) > 1:
+                    cond2 = np.ones(len(df_brand), dtype=bool)
+                    cond2 &= np.isclose(df_brand["电压(V)"], mapped_voltage, atol=2)
+                    if input_data.get("容量(Ah)"):
+                        cond2 &= np.isclose(df_brand["容量(Ah)"], input_data.get("容量(Ah)", 0), atol=5)
+                    if input_data.get("总重量(kg)"):
+                        cond2 &= np.isclose(df_brand["总重量(kg)"], input_data.get("总重量(kg)", 0), atol=5)
+                    match = df_brand[cond2]
             if not match.empty:
                 candidates = match.copy()
                 results = {}
@@ -204,19 +232,19 @@ def recommend_battery(input_data, _is_fallback=False):
                     hz_weight_base = safe_float(input_data.get("惠州配重出厂价(USD)（不含VAT税）", 1.5))  # 单位USD/KG
                     # 计算KWH
                     kwh = safe_float(result.get("电压(V)", 0)) * safe_float(result.get("容量(Ah)", 0)) / 1000
+                    counter_weight = safe_float(result.get("配重(kg)", 0))
                     hz_price = hz_base * kwh + counter_weight * hz_weight_base
-                    nl_price = hz_price * 1.2 / EUR_USD_RATE
+                    nl_price = hz_price * 1.2 / eur_usd_rate
                     result["惠州出厂价(USD)"] = f"{hz_price:.2f}"
                     result["荷兰EXW出货价(EUR)"] = f"{nl_price:.2f}"
-                    result["汇率(USD/EUR)"] = f"1 EUR = {EUR_USD_RATE:.4f} USD"
-                    # 推荐结果尺寸格式化为x分隔，且始终三段式
+                    # 删除 result["汇率(USD/EUR)"] 字段
                     if "尺寸(mm)" in result and isinstance(result["尺寸(mm)"], str):
                         size_str = result["尺寸(mm)"].replace("×", "x").replace("*", "x").replace("X", "x")
                         parts = [p.strip() for p in size_str.split("x") if p.strip()]
                         while len(parts) < 3:
                             parts.append("-")
                         result["尺寸(mm)"] = "x".join(parts[:3])
-                    for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)", "汇率(USD/EUR)"]:
+                    for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)"]:
                         v = result.pop(k)
                         result[k] = v
                     # 推荐结果尺寸不能大于输入尺寸（如有输入）
@@ -232,9 +260,11 @@ def recommend_battery(input_data, _is_fallback=False):
                     return results
                 else:
                     return {"推荐失败": "系统中没有匹配的锂电池型号推荐，建议咨询研发设计人员。"}
+            else:
+                return {"推荐失败": "系统中没有匹配电压的锂电池型号推荐，建议咨询研发设计人员。"}
         elif "原电池类型" in input_data and input_data["原电池类型"] == "铅酸电池":
             raw_capacity = float(input_data.get("容量(Ah)", 0))
-            target_capacity = raw_capacity * 0.75
+            target_capacity = raw_capacity * 0.8  # 修改为0.8
             input_voltage = float(input_data.get("电压(V)", 0))
             # 智能电压映射：如输入电压与锂电池电压差值大于1，或数据源无精确匹配，则自动映射到最接近的锂电池电压
             all_voltages = sorted(df_brand["电压(V)"].unique())
@@ -293,17 +323,17 @@ def recommend_battery(input_data, _is_fallback=False):
                         kwh = safe_float(result.get("电压(V)", 0)) * safe_float(result.get("容量(Ah)", 0)) / 1000
                         counter_weight = safe_float(result.get("配重(kg)", 0))
                         hz_price = hz_base * kwh + counter_weight * hz_weight_base
-                        nl_price = hz_price * 1.2 / EUR_USD_RATE
+                        nl_price = hz_price * 1.2 / eur_usd_rate
                         result["惠州出厂价(USD)"] = f"{hz_price:.2f}"
                         result["荷兰EXW出货价(EUR)"] = f"{nl_price:.2f}"
-                        result["汇率(USD/EUR)"] = f"1 EUR = {EUR_USD_RATE:.4f} USD"
+                        # 删除 result["汇率(USD/EUR)"] 字段
                         if "尺寸(mm)" in result and isinstance(result["尺寸(mm)"], str):
                             size_str = result["尺寸(mm)"].replace("×", "x").replace("*", "x").replace("X", "x")
                             parts = [p.strip() for p in size_str.split("x") if p.strip()]
                             while len(parts) < 3:
                                 parts.append("-")
                             result["尺寸(mm)"] = "x".join(parts[:3])
-                        for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)", "汇率(USD/EUR)"]:
+                        for k in ["惠州出厂价(USD)", "荷兰EXW出货价(EUR)"]:
                             v = result.pop(k)
                             result[k] = v
                         if input_size_tuple and "尺寸(mm)" in result and isinstance(result["尺寸(mm)"], str):

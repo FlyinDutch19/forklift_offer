@@ -11,6 +11,7 @@
 - `tests/`：单元测试目录
 
 ## 快速启动
+
 ```bash
 pip install -r requirements.txt
 python3 app.py
@@ -18,24 +19,29 @@ python3 app.py
 ```
 
 ## 单元测试
+
 ```bash
 python3 -m unittest discover tests
 ```
 
-## 推荐API
+## 推荐 API
+
 - POST `/api/recommend`  
   参数：JSON，详见前端表单字段  
-  返回：推荐表格HTML及原始推荐结果
+  返回：推荐表格 HTML 及原始推荐结果
 
 ## 主要功能
+
 - 支持多品牌、尺寸、重量、容量等多条件推荐
-- 尺寸输入前后端全兼容 x/*/×/X 分隔
+- 尺寸输入前后端全兼容 x/\*/×/X 分隔
 - 兜底分支、异常处理健壮
 
 ## 部署建议
+
 - 支持 Docker 部署（可按需补充 Dockerfile）
 - 推荐使用 Linux/WSL 环境
 
 ## 常见问题
+
 - 推荐失败多为参数不符或无匹配型号，可适当放宽输入
 - 其它问题请联系维护者

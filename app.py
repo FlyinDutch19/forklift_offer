@@ -30,10 +30,17 @@ def safe_str(val):
     return str(val)
 
 def clean_json(obj):
-    # 递归清理所有 NaN/None/np.nan/pd.NA/字符串'nan'
+    # 递归清理所有 NaN/None/np.nan/pd.NA/字符串'nan'，支持 dict/list/tuple
+    import math
+    try:
+        import numpy as np
+        import pandas as pd
+    except ImportError:
+        np = None
+        pd = None
     if isinstance(obj, dict):
         return {k: clean_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
+    elif isinstance(obj, (list, tuple)):
         return [clean_json(v) for v in obj]
     elif obj is None:
         return "-"
@@ -41,15 +48,10 @@ def clean_json(obj):
         if math.isnan(obj):
             return "-"
         return obj
-    elif str(obj) == "nan":
+    elif np and (obj is np.nan or obj is pd.NA):
         return "-"
-    try:
-        import numpy as np
-        import pandas as pd
-        if obj is np.nan or obj is pd.NA:
-            return "-"
-    except Exception:
-        pass
+    elif isinstance(obj, str) and obj.strip().lower() in ("nan", "none"):
+        return "-"
     return obj
 
 def format_result_table(result_dict, discount=None):
@@ -152,21 +154,21 @@ def api_recommend():
             if isinstance(result, dict) and all(isinstance(v, dict) for v in result.values()):
                 tables = []
                 for k, v in result.items():
-                    v["汇率(EUR/USD)"] = f"{eur_usd_rate:.4f}"
+                    v.pop("汇率(EUR/USD)", None)
                     tables.append('<h4 style="margin-top:18px;">' + html.escape(safe_str(k)) + '</h4>' + format_result_table(v, discount))
                 return jsonify({"table": "<br>".join(tables), "raw": clean_json(result)})
             # 单条推荐
             if isinstance(result, dict):
                 if "推荐电池型号" in result:
                     result["锂电池型号"] = result.pop("推荐电池型号")
-                result["汇率(EUR/USD)"] = f"{eur_usd_rate:.4f}"
+                result.pop("汇率(EUR/USD)", None)
                 table_html = format_result_table(result, discount)
                 return jsonify({"table": table_html, "raw": clean_json(result)})
             # 列表推荐
             if isinstance(result, list):
                 for v in result:
                     if isinstance(v, dict):
-                        v["汇率(EUR/USD)"] = f"{eur_usd_rate:.4f}"
+                        v.pop("汇率(EUR/USD)", None)
                 table_html = format_result_table({k: v for k, v in enumerate(result)}, discount)
                 return jsonify({"table": table_html, "raw": clean_json(result)})
             return jsonify({"error": "系统异常，未能获取推荐结果。"}), 500
